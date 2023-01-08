@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="Example" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    <!--Base Mission information-->
+    <!--
+    Formatting:    XML
+
+    This is an example file, used to showcase XML highlighting, and your configuration options.
+    The file was taken from the game files, and is a stripped down representation of the GM_Assasination xml file.
+
+    To Find the full file, search for `assassinate`
+    -->
+    <cue name="FeedbackValueManager" namespace="this" version="4">
+      <actions>
+        <!-- TODO (@Lorraine): make sure to replace $invalid_* errors with valid errors according to what the mission needs up to $INVALID_FORCE_CLEANUP (which should stay) -->
+        <!-- TODO (@Lorraine): make sure to replace RML errors with valid errors according to what the mission needs (equivalent to $RML_FAILED) -->
+        <set_value name="$FeedbackValues" exact="table[
+                   $MISSION_GENERATED       = table[$type = 'event',    $text = 'Mission variation generated successfully'],
+                   $MISSION_ACCEPTED        = table[$type = 'event',    $text = 'Mission accepted'],
+                   $MISSION_NO_VARIANT      = table[$type = 'event',    $text = 'No mission variant currently possible'],
+                   $MISSION_NO_NPC_SCENE    = table[$type = 'event',    $text = 'No mission NPC scene could be set up'],
+
+                   $OFFER_REMOVED           = table[$type = 'removed',  $text = 'Offer removed'],
+                   $DECLINED_OFFER          = table[$type = 'removed',  $text = 'Player declined Event Offer'],
+                   $EVENT_OFFER_TIMEOUT     = table[$type = 'removed',  $text = 'Event Offer timeout'],
+                   $SIGNAL_LEAK_REMOVED     = table[$type = 'removed',  $text = 'Signal leak offer removed'],
+                   $TARGET_KILLED_EARLY     = table[$type = 'removed',  $text = 'Object was destroyed during the offer'],
+
+                   $MISSION_SUCCEEDED       = table[$type = 'success',  $text = 'Mission succeeded'],
+
+                   $MISSION_ABORTED         = table[$type = 'failure',  $text = 'Mission aborted by player'],
+                   $FORCED_CLEANUP          = table[$type = 'failure',  $text = 'Forced to end from outside'],
+                   $MISSION_TIMEOUT         = table[$type = 'failure',  $text = 'Mission timeout'],
+                   $RML_FAILED              = table[$type = 'failure',  $text = 'RML failure'],
+
+                   $NO_VALID_CLIENT_OWNER   = table[$type = 'error',    $text = 'No valid ClientOwner parameter provided'],
+                   $INVALID_OFFER_TYPE      = table[$type = 'error',    $text = 'No offer parameters were valid'],
+                   $NO_TEXT_OFFSET          = table[$type = 'error',    $text = 'No TextOffset set'],
+
+                   $INVALID_ASSASSINATIONTARGET_PARAM = table[$type = 'error', $text = 'Invalid AssassinationTarget param'],
+                   $INVALID_SIGNALLEAKVOICELINE_PARAM = table[$type = 'error', $text = 'Invalid SignalLeakVoiceLine param'],
+
+                   $INVALID_FORCE_CLEANUP   = table[$type = 'error',    $text = 'ForceCleanup cue invalid'],
+                   $RML_ERROR               = table[$type = 'error',    $text = 'RML error']
+                   ]"/>
+      </actions>
+      <patch sinceversion="4">
+        <!--To patch new feedback values, increment 'version' and 'sinceversion' number-->
+        <force_cue cue="FeedbackValueManager"/>
+      </patch>
+    </cue>
+
+    <!--Required variables: $Page & $TextOffset (and any below substitute_text values)
+    If text is to be substituted for a new text variant, people should feel free to add the substitution below. Alternatively, pass in an overriding text in the $TextTable param-->
+    <library name="GenerateTextTable">
+      <actions>
+        <!--Text page indexes $TextOffset + #
+        1 = $TextTable.$missionname (male)
+        2 = $TextTable.$missionname (female, optional, defaults to male if ID doesn't exist)
+
+        Beware of using $SHIPID$ if used in a not-yet-activated sequential mission
+        3 = $TextTable.$description (male)
+        4 = $TextTable.$description (female, optional, defaults to male if ID doesn't exist)
+
+        Combined with description text after mission is activated
+        5 = $TextTable.$description2 (male, optional)
+        6 = $TextTable.$description2 (female, optional, defaults to male if ID doesn't exist)-->
+
+        <set_value name="$TargetShip" exact="$AssassinationTarget.controlled"/>
+
+        <do_if value="not $TextTable.$missionname?">
+          <set_value name="$NameID" exact="$TextOffset + 1"/>
+          <do_if value="$AssassinationTarget.isfemale">
+            <do_if value="readtext.{$Page}.{$TextOffset + 2}?">
+              <set_value name="$NameID" exact="$TextOffset + 2"/>
+            </do_if>
+          </do_if>
+          <substitute_text text="$TextTable.$missionname" source="readtext.{$Page}.{$NameID}">
+            <replace string="'$SHIPTYPE$'" with="$TargetShip.macro.name" />
+            <replace string="'$SHIPID$'" with="$AssassinationTarget.controlled.idcode" />
+            <replace string="'$NPCName$'" with="$AssassinationTarget.knownname" comment="backward compatibility"/>
+            <replace string="'$NPCNAME$'" with="$AssassinationTarget.knownname" />
+          </substitute_text>
+        </do_if>
+
+        <do_if value="not $TextTable.$description?">
+          <set_value name="$DescriptionID" exact="$TextOffset + 3"/>
+          <do_if value="$AssassinationTarget.isfemale">
+            <do_if value="readtext.{$Page}.{$TextOffset + 4}?">
+              <set_value name="$DescriptionID" exact="$TextOffset + 4"/>
+            </do_if>
+          </do_if>
+
+          <substitute_text text="$TextTable.$description" source="readtext.{$Page}.{$DescriptionID}">
+            <replace string="'$SHIPTYPE$'" with="$TargetShip.macro.name" />
+            <replace string="'$SHIPID$'" with="$AssassinationTarget.controlled.idcode" />
+            <replace string="'$NPCName$'" with="$AssassinationTarget.knownname" comment="backward compatibility"/>
+            <replace string="'$NPCNAME$'" with="$AssassinationTarget.knownname"/>
+          </substitute_text>
+
+          <set_value name="$TextTable.$description" exact="$TextTable.$description + '\n\n' + readtext.{30004}.{3501}" comment="WARNING: This may be seen as a criminal activity."/>
+          <set_value name="$TextTable.$description" exact="$TextTable.$description + '\n\n' + readtext.{30134}.{(if $AssassinationTarget.isfemale then 12 else 11)} + $TargetShip.macro.name" comment="TARGET SHIP TYPE: $SHIPTYPE$ (allows player to assess difficulty)"/>
+
+          <run_actions ref="md.LIB_Generic.GenerateTextTable_BriefingWarning_Call" result="$TextTable.$description">
+            <param name="BriefingText" value="$TextTable.$description"/>
+            <param name="TargetSpace" value="$AssassinationTarget.sector"/>
+          </run_actions>
+
+        </do_if>
+
+        <do_if value="not $TextTable.$description2? and readtext.{$Page}.{$TextOffset + 5}?">
+          <set_value name="$DescriptionID" exact="$TextOffset + 5"/>
+          <do_if value="$AssassinationTarget.isfemale">
+            <do_if value="readtext.{$Page}.{$TextOffset + 6}?">
+              <set_value name="$DescriptionID" exact="$TextOffset + 6"/>
+            </do_if>
+          </do_if>
+
+
+          <substitute_text text="$TextTable.$description2" source="readtext.{$Page}.{$DescriptionID}">
+            <replace string="'$SHIPTYPE$'" with="$TargetShip.macro.name" />
+            <replace string="'$SHIPID$'" with="$AssassinationTarget.controlled.idcode" />
+            <replace string="'$NPCName$'" with="$AssassinationTarget.knownname" comment="backward compatibility"/>
+            <replace string="'$NPCNAME$'" with="$AssassinationTarget.knownname" />
+          </substitute_text>
+        </do_if>
+      </actions>
+    </library>
+  </cues>
+</mdscript>
