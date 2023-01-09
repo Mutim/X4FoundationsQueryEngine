@@ -37,6 +37,9 @@ class App(customtkinter.CTk):
         super().__init__()
 
         # configure window
+        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "images")
+        # self.wm_iconbitmap(os.path.join(image_path, "logo.ico"))
+        self.iconbitmap(os.path.join(image_path, "logo.ico"))
         self.title("X4 Foundations Query Engine (XQE)")
         self.geometry(f"{config['window_width']}x{config['window_height']}+0+0")
 
@@ -46,7 +49,6 @@ class App(customtkinter.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         # load images with light and dark mode image
-        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "images")
         self.logo_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "logo.png")),
                                                  size=(56, 56))
         self.home_image = customtkinter.CTkImage(
@@ -198,9 +200,9 @@ class App(customtkinter.CTk):
         # # set default values
         self.appearance_mode_optionemenu.set("Dark")
         self.scaling_optionemenu.set("100%")
-        self.textbox.insert("0.0", self.example_text())
+        self.insert_xml_file("test.xml", self.textbox)
+        # self.textbox.insert("0.0", self.example_text())
         self.select_frame_by_name("search_frame")  # select default frame
-
 
     # # Logical Helper Functions
     def set_file_path(self):
@@ -245,8 +247,9 @@ class App(customtkinter.CTk):
         with open(file=file) as f:
             return f.read()
 
-    def highlight_xml(self, file: str):
-        highlighter = SyntaxHighlighter(file)
+    def insert_xml_file(self, xml_file, textbox):
+        keywords = ["xmlns", "cues", "xsi"]
+        highlighter = SyntaxHighlighter(xml_file, textbox, keywords)
         highlighter.highlight()
 
     def change_scaling_event(self, new_scaling: str):

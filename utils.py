@@ -14,16 +14,34 @@ Widget = Union[tk.Widget, ttk.Widget]
 
 
 class SyntaxHighlighter:
-    def __init__(self, xml_file):
+    def __init__(self, xml_file, textbox, keywords):
         self.xml_file = xml_file
         self.tree = ET.parse(self.xml_file)
         self.root = self.tree.getroot()
+        self.textbox = textbox
+        self.keywords = keywords
 
     def highlight(self):
-        xml_string = ET.tostring(self.root, encoding='UTF-8')
-        colored_xml = highlight(xml_string, XmlLexer(), TerminalFormatter())
+        xml_string = ET.tostring(self.root, encoding='UTF-8').decode()
 
-        return colored_xml
+        # insert the xml string into the textbox
+        self.textbox.insert("end", xml_string)
+        # create a list to store the indices of the start and end of each keyword
+        tag_indices = []
+        # iterate over the string and look for keywords
+        for i, c in enumerate(xml_string):
+            if c in self.keywords:
+                start_index = f"{i}.0"
+                end_index = f"{i + len(c)}.0"
+                tag_indices.append((start_index, end_index))
+        print(tag_indices)
+
+        # apply tags to the keywords based on the indices stored in tag_indices
+        for start_index, end_index in tag_indices:
+            self.textbox.tag_add("keyword", start_index, end_index)
+
+        # configure the tags to change the text color not working....
+        self.textbox.tag_config("keyword", foreground="red")
 
 
 class ToolTip(tk.Toplevel):
