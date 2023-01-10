@@ -1,14 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-import os
-import json
-import xmltodict
 from typing import Union
 import xml.etree.ElementTree as ET
-from pygments import highlight
-from pygments.lexers import XmlLexer
-from pygments.formatters import TerminalFormatter
-from config import configuration
 
 Widget = Union[tk.Widget, ttk.Widget]
 
