@@ -6,7 +6,7 @@ import glob
 import json
 from PIL import Image
 
-from utils import ToolTip, SyntaxHighlighter
+from utils import ToolTip, SyntaxHighlighter, xml_to_json
 
 if not os.path.isfile("config.py"):
     sys.exit("'config.py' not found! Please add it and restart the program")
@@ -38,10 +38,11 @@ class App(customtkinter.CTk):
 
         # configure window
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "images")
+        # Do a system check. This does not work with linux.
         # self.wm_iconbitmap(os.path.join(image_path, "logo.ico"))
-        self.iconbitmap(os.path.join(image_path, "logo.ico"))
+        # self.iconbitmap(os.path.join(image_path, "logo.ico"))
         self.title("X4 Foundations Query Engine (XQE)")
-        self.geometry(f"{config['window_width']}x{config['window_height']}+0+0")
+        self.geometry(f"{config['window_width']}x{config['window_height']}+10+10")
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -52,16 +53,16 @@ class App(customtkinter.CTk):
         self.logo_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "logo.png")),
                                                  size=(56, 56))
         self.home_image = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(image_path, "dark/home_dark.png")),
-            dark_image=Image.open(os.path.join(image_path, "light/home_light.png")),
+            light_image=Image.open(os.path.join(image_path, "dark", "home_dark.png")),
+            dark_image=Image.open(os.path.join(image_path, "light", "home_light.png")),
             size=(36, 36))
         self.search_image = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(image_path, "dark/search_dark.png")),
-            dark_image=Image.open(os.path.join(image_path, "light/search_light.png")),
+            light_image=Image.open(os.path.join(image_path, "dark", "search_dark.png")),
+            dark_image=Image.open(os.path.join(image_path, "light", "search_light.png")),
             size=(36, 36))
         self.converter_image = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(image_path, "dark/converter_dark.png")),
-            dark_image=Image.open(os.path.join(image_path, "light/converter_light.png")),
+            light_image=Image.open(os.path.join(image_path, "dark", "converter_dark.png")),
+            dark_image=Image.open(os.path.join(image_path, "light", "converter_light.png")),
             size=(36, 36))
 
         # create sidebar frame with sections to tools
@@ -103,6 +104,33 @@ class App(customtkinter.CTk):
         self.home_frame.grid_columnconfigure(0, weight=1)
         # TODO: Add main configuration file, and the readme file.
 
+        # create home frame tabs
+        self.home_tabview = customtkinter.CTkTabview(self.home_frame, width=0)
+        self.home_tabview.grid(row=0, rowspan=1, column=4, padx=(10, 10), pady=(0, 0), sticky="w")
+        self.home_tabview.add("Configure")
+        self.home_tabview.tab("Configure").grid_columnconfigure(0, weight=1)
+
+        # # Configuration Menu
+        self.scripts_menu = customtkinter.CTkLabel(self.home_tabview.tab("Configure"), text="Configuration")
+        self.scripts_menu.grid(row=0, column=0, padx=5, pady=(0, 0))
+
+        self.appearance_mode_label = customtkinter.CTkLabel(self.home_tabview.tab("Configure"), text="Appearance Mode:",
+                                                            anchor="center")
+        self.appearance_mode_label.grid(row=0, column=0, padx=5, pady=(0, 0))
+
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.home_tabview.tab("Configure"),
+                                                                       values=["Light", "Dark", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=2, column=0, padx=5, pady=(0, 10))
+
+        # Set Scaling Percentage
+        self.scaling_label = customtkinter.CTkLabel(self.home_tabview.tab("Configure"), text="UI Scaling:", anchor="w")
+        self.scaling_label.grid(row=5, column=0, padx=5, pady=(0, 0))
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.home_tabview.tab("Configure"),
+                                                               values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=self.change_scaling_event)
+        self.scaling_optionemenu.grid(row=6, column=0, padx=5, pady=(0, 10))
+
         # # # create search frame
         self.search_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.search_frame.grid_columnconfigure(2, weight=1)
@@ -121,15 +149,13 @@ class App(customtkinter.CTk):
         self.textbox = customtkinter.CTkTextbox(self.search_frame, width=300, font=('DejaVu Sans Mono', 12, 'normal'))
         self.textbox.grid(row=0, rowspan=3, column=1, columnspan=3, padx=(10, 0), pady=(10, 0), sticky="nsew")
 
-        # create tabs
+        # create search frame tabs
         self.tabview = customtkinter.CTkTabview(self.search_frame, width=0)
         self.tabview.grid(row=0, rowspan=1, column=4, padx=(10, 10), pady=(0, 0), sticky="w")
         self.tabview.add("Filter")
         self.tabview.add("Options")
-        self.tabview.add("Configure")
         self.tabview.tab("Filter").grid_columnconfigure(0, weight=1)
         self.tabview.tab("Options").grid_columnconfigure(0, weight=1)
-        self.tabview.tab("Configure").grid_columnconfigure(0, weight=1)
 
         # # Scripts Menu
         self.scripts_menu = customtkinter.CTkLabel(self.tabview.tab("Filter"), text="Filter Result by Directory")
@@ -160,33 +186,12 @@ class App(customtkinter.CTk):
                                                      command=self.open_input_dialog_event)
         self.dialog_button.grid(row=0, column=0, padx=5, pady=(0, 10))
 
-        # # Configuration Menu
-        self.scripts_menu = customtkinter.CTkLabel(self.tabview.tab("Configure"), text="Configuration")
-        self.scripts_menu.grid(row=0, column=0, padx=5, pady=(0, 0))
-
-        self.appearance_mode_label = customtkinter.CTkLabel(self.tabview.tab("Configure"), text="Appearance Mode:",
-                                                            anchor="center")
-        self.appearance_mode_label.grid(row=0, column=0, padx=5, pady=(0, 0))
-
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.tabview.tab("Configure"),
-                                                                       values=["Light", "Dark", "System"],
-                                                                       command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=2, column=0, padx=5, pady=(0, 10))
-
         # Set path to Extracted Game Files
-        self.config_label_path_label = customtkinter.CTkLabel(self.tabview.tab("Configure"),
+        self.config_label_path_label = customtkinter.CTkLabel(self.tabview.tab("Options"),
                                                               text="Set Path")
         self.config_label_path_label.grid(row=3)
-        self.config_label_path_button = customtkinter.CTkButton(self.tabview.tab("Configure"), text="Extracted Files",
+        self.config_label_path_button = customtkinter.CTkButton(self.tabview.tab("Options"), text="Extracted Files",
                                                                 command=self.set_file_path)
-
-        # Set Scaling Percentage
-        self.scaling_label = customtkinter.CTkLabel(self.tabview.tab("Configure"), text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=5, column=0, padx=5, pady=(0, 0))
-        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.tabview.tab("Configure"),
-                                                               values=["80%", "90%", "100%", "110%", "120%"],
-                                                               command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=6, column=0, padx=5, pady=(0, 10))
 
         tt = ToolTip(self)
 
@@ -248,7 +253,7 @@ class App(customtkinter.CTk):
             return f.read()
 
     def insert_xml_file(self, xml_file, textbox):
-        keywords = ["xmlns", "cues", "xsi"]
+        keywords = config["syntax_keywords"]
         highlighter = SyntaxHighlighter(xml_file, textbox, keywords)
         highlighter.highlight()
 
@@ -292,14 +297,6 @@ class App(customtkinter.CTk):
             "0.0",
             text=f'\nFound {number_found} files containing: "{keyword.pattern}"\n'
                  f'Select a filter option on the right to refine your search.\n\n')
-
-    def xml_to_json(self, xml_file):
-        with open(xml_file, encoding='utf-8') as f:
-            xml_string = f.read()
-        data = xmltodict.parse(xml_string)
-        json_string = json.dumps(data, ensure_ascii=True, indent=4)
-
-        return json_string
 
     # # #
     def select_frame_by_name(self, name):

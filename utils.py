@@ -2,6 +2,10 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from typing import Union
 import xml.etree.ElementTree as ET
+import json
+import xmltodict
+import re
+
 
 Widget = Union[tk.Widget, ttk.Widget]
 
@@ -15,26 +19,32 @@ class SyntaxHighlighter:
         self.keywords = keywords
 
     def highlight(self):
-        xml_string = ET.tostring(self.root, encoding='UTF-8').decode()
-
-        # insert the xml string into the textbox
+        tree = ET.parse(self.xml_file)
+        root = tree.getroot()
+        xml_string = ET.tostring(root, encoding='unicode')
         self.textbox.insert("end", xml_string)
-        # create a list to store the indices of the start and end of each keyword
-        tag_indices = []
-        # iterate over the string and look for keywords
-        for i, c in enumerate(xml_string):
-            if c in self.keywords:
-                start_index = f"{i}.0"
-                end_index = f"{i + len(c)}.0"
-                tag_indices.append((start_index, end_index))
-        print(tag_indices)
+        comment_re = re.compile(r"(<!--.*?-->)")
+        for m in comment_re.finditer(xml_string):
+            self.textbox.insert("end", m.group())
+            self.textbox.tag_config("comment", foreground="green")
+            self.textbox.tag_add("comment", "end-%dc" % len(m.group()), "end")
+        for keyword, color in self.keywords:
+            index = 0
+            while keyword in xml_string[index:]:
+                start_index = xml_string.index(keyword, index)
+                end_index = start_index + len(keyword)
+                self.textbox.tag_config(keyword, foreground=color)
+                self.textbox.tag_add(keyword, "end-%dc" % (len(xml_string) - start_index+1), "end-%dc" % (len(xml_string) - end_index+1))
+                index = end_index
 
-        # apply tags to the keywords based on the indices stored in tag_indices
-        for start_index, end_index in tag_indices:
-            self.textbox.tag_add("keyword", start_index, end_index)
 
-        # configure the tags to change the text color not working....
-        self.textbox.tag_config("keyword", foreground="red")
+def xml_to_json(xml_file):
+    with open(xml_file, encoding='utf-8') as f:
+        xml_string = f.read()
+    data = xmltodict.parse(xml_string)
+    json_string = json.dumps(data, ensure_ascii=True, indent=4)
+
+    return json_string
 
 
 class ToolTip(tk.Toplevel):

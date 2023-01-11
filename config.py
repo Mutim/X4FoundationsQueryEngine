@@ -3,6 +3,12 @@
     as is, though if you find that you want more fine control, feel free to change an entry from this file.
 """
 
+tags = "#ffd700"
+strings = "#8fbc8f"
+comments = "c4c4c4"
+misc = "#ff5700"
+
+
 configuration = {
     # Window Configuration
     "window_width": 1100,
@@ -15,5 +21,13 @@ configuration = {
     "exact_match": False,
 
     # Text Configuration
-    "text_scale": 100
+    "text_scale": 100,
+    # List of keywords to be highlighted by syntax highlighter. Feel free to add/remove/change colors.
+    "syntax_keywords": [
+        (">", tags), ("<", tags), ("/>", tags), ("</", tags), ("xmlns", tags), ("cues", tags), ("xsi", tags),
+        ("mdscript", tags), ("cue", tags), ("replace", tags), ("do_if", tags), ("actions", tags), ("library", tags),
+        ("substitute_text", tags), ("run_actions", tags), ("param", tags), ("set_value", tags),
+
+
+        ("=", strings)]
 }
