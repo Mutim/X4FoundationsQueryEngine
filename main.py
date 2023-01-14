@@ -40,7 +40,8 @@ class App(customtkinter.CTk):
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "images")
         # Do a system check. This does not work with linux.
         # self.wm_iconbitmap(os.path.join(image_path, "logo.ico"))
-        # self.iconbitmap(os.path.join(image_path, "logo.ico"))
+        if not os.name == 'posix':
+            self.iconbitmap(os.path.join(image_path, "logo.ico"))
         self.title("X4 Foundations Query Engine (XQE)")
         self.geometry(f"{config['window_width']}x{config['window_height']}+10+10")
 

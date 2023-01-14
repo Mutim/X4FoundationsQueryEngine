@@ -1,31 +1,34 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from typing import Union
-import xml.etree.ElementTree as ET
+from lxml import etree
 import json
 import xmltodict
 import re
+import os
 
 
 Widget = Union[tk.Widget, ttk.Widget]
 
 
+from lxml import etree
+import re
+import os
+
 class SyntaxHighlighter:
     def __init__(self, xml_file, textbox, keywords):
         self.xml_file = xml_file
-        self.tree = ET.parse(self.xml_file)
+        self.tree = etree.parse(self.xml_file)
         self.root = self.tree.getroot()
         self.textbox = textbox
         self.keywords = keywords
 
     def highlight(self):
-        tree = ET.parse(self.xml_file)
-        root = tree.getroot()
-        xml_string = ET.tostring(root, encoding='unicode')
-        self.textbox.insert("end", xml_string)
+        xml_string = etree.tostring(self.root, encoding='unicode', pretty_print=True)
+        self.textbox.insert("end", xml_string, "utf-8")
         comment_re = re.compile(r"(<!--.*?-->)")
         for m in comment_re.finditer(xml_string):
-            self.textbox.insert("end", m.group())
+            self.textbox.insert("end", m.group(), "utf-8")
             self.textbox.tag_config("comment", foreground="green")
             self.textbox.tag_add("comment", "end-%dc" % len(m.group()), "end")
         for keyword, color in self.keywords:
@@ -34,8 +37,13 @@ class SyntaxHighlighter:
                 start_index = xml_string.index(keyword, index)
                 end_index = start_index + len(keyword)
                 self.textbox.tag_config(keyword, foreground=color)
-                self.textbox.tag_add(keyword, "end-%dc" % (len(xml_string) - start_index+1), "end-%dc" % (len(xml_string) - end_index+1))
+                self.textbox.tag_add(keyword, "end-%dc" % (len(xml_string) - start_index + 1),
+                                     "end-%dc" % (len(xml_string) - end_index + 1))
                 index = end_index
+
+        self.textbox.insert("end", "\n", "utf-8")
+
+
 
 
 def xml_to_json(xml_file):
