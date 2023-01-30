@@ -1,11 +1,13 @@
+import re
 """
     Configuration File. Some things are changed from within the application. Most settings should be fine to be left
     as is, though if you find that you want more fine control, feel free to change an entry from this file.
 """
 
 tags = "#ffd700"
+parameters = "#5F9EA0"
 strings = "#8fbc8f"
-comments = "c4c4c4"
+comments = "#329664"
 misc = "#ff5700"
 
 
@@ -24,10 +26,17 @@ configuration = {
     "text_scale": 100,
     # List of keywords to be highlighted by syntax highlighter. Feel free to add/remove/change colors.
     "syntax_keywords": [
+        # Tags
         (">", tags), ("<", tags), ("/>", tags), ("</", tags), ("xmlns", tags), ("cues", tags), ("xsi", tags),
         ("mdscript", tags), ("cue", tags), ("replace", tags), ("do_if", tags), ("actions", tags), ("library", tags),
         ("substitute_text", tags), ("run_actions", tags), ("param", tags), ("set_value", tags),
 
+        # Strings
+        ("=", strings),
+        (re.compile(r"([a-zA-Z]+)\s*=\s*([a-zA-Z]+)"), strings),
 
-        ("=", strings)]
+        # Comments
+        (re.compile(r"(<!--[\s\S]*?-->)"), comments)
+
+    ]
 }

@@ -1,3 +1,5 @@
+import time
+
 import customtkinter
 import os
 import sys
@@ -22,13 +24,15 @@ query_md = []
 query_libraries = []
 query_index = []
 query_aiscripts = []
+query_all = []
 
 mapped_list = {
             't': query_t,
             'md': query_md,
             'libraries': query_libraries,
             'index': query_index,
-            'aiscripts': query_aiscripts
+            'aiscripts': query_aiscripts,
+            'all': query_all
         }
 
 
@@ -115,6 +119,7 @@ class App(customtkinter.CTk):
         self.scripts_menu = customtkinter.CTkLabel(self.home_tabview.tab("Configure"), text="Configuration")
         self.scripts_menu.grid(row=0, column=0, padx=5, pady=(0, 0))
 
+        # Set Appearance Mode
         self.appearance_mode_label = customtkinter.CTkLabel(self.home_tabview.tab("Configure"), text="Appearance Mode:",
                                                             anchor="center")
         self.appearance_mode_label.grid(row=0, column=0, padx=5, pady=(0, 0))
@@ -123,6 +128,13 @@ class App(customtkinter.CTk):
                                                                        values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=2, column=0, padx=5, pady=(0, 10))
+
+        # Set path to Extracted Game Files
+        self.config_label_path_label = customtkinter.CTkLabel(self.home_tabview.tab("Configure"),
+                                                              text="Set Path")
+        self.config_label_path_label.grid(row=3)
+        self.config_label_path_button = customtkinter.CTkButton(self.home_tabview.tab("Configure"), text="Extracted Files",
+                                                                command=self.set_file_path)
 
         # Set Scaling Percentage
         self.scaling_label = customtkinter.CTkLabel(self.home_tabview.tab("Configure"), text="UI Scaling:", anchor="w")
@@ -142,8 +154,12 @@ class App(customtkinter.CTk):
         self.entry.grid(row=3, column=1, columnspan=3, padx=(5, 5), pady=(20, 20), sticky="nsew")
         self.entry.bind('<Return>', self.on_enter)
 
+        # self.progress_bar = customtkinter.CTkProgressBar(master=self.entry)
+        # self.progress_bar.grid(row=4, column=0, padx=(10, 10), pady=(0, 0), sticky="ew")
+        # self.progress_bar.configure()
+
         self.main_button_1 = customtkinter.CTkButton(master=self.search_frame, text='Search', fg_color="transparent", border_width=2,
-                                                     text_color=("gray10", "#DCE4EE"), command=self.query_result)
+                                                     text_color=("gray10", "#DCE4EE"), command=lambda: self.query_result())
         self.main_button_1.grid(row=3, column=4, padx=(10, 10), pady=(20, 20), sticky="nsew")
 
         # create textbox
@@ -165,21 +181,26 @@ class App(customtkinter.CTk):
         self.scripts_button1 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="T",
                                                        command=lambda: self.sidebar_button_event('T'))
         self.scripts_button1.grid(row=1, column=0, padx=5, pady=(0, 10))
+
         self.scripts_button2 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="MD",
                                                        command=lambda: self.sidebar_button_event('MD'))
         self.scripts_button2.grid(row=2, column=0, padx=5, pady=(0, 10))
+
         self.scripts_button3 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="Libraries",
                                                        command=lambda: self.sidebar_button_event('Libraries'))
         self.scripts_button3.grid(row=3, column=0, padx=5, pady=(0, 10))
+
         self.scripts_button4 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="Index",
                                                        command=lambda: self.sidebar_button_event('Index'))
         self.scripts_button4.grid(row=4, column=0, padx=5, pady=(0, 10))
+
         self.scripts_button5 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="AI Scripts",
                                                        command=lambda: self.sidebar_button_event('AIScripts'))
         self.scripts_button5.grid(row=5, column=0, padx=5, pady=(0, 10))
-        self.scripts_button5 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="All Instance",
-                                                       command=lambda: self.sidebar_button_event('AIScripts'))
-        self.scripts_button5.grid(row=5, column=0, padx=5, pady=(0, 10))
+
+        self.scripts_button6 = customtkinter.CTkButton(self.tabview.tab("Filter"), text="All Instance",
+                                                       command=lambda: self.sidebar_button_event('All'))
+        self.scripts_button6.grid(row=6, column=0, padx=5, pady=(0, 10))
 
         # # Options Menu
 
@@ -187,16 +208,9 @@ class App(customtkinter.CTk):
                                                      command=self.open_input_dialog_event)
         self.dialog_button.grid(row=0, column=0, padx=5, pady=(0, 10))
 
-        # Set path to Extracted Game Files
-        self.config_label_path_label = customtkinter.CTkLabel(self.tabview.tab("Options"),
-                                                              text="Set Path")
-        self.config_label_path_label.grid(row=3)
-        self.config_label_path_button = customtkinter.CTkButton(self.tabview.tab("Options"), text="Extracted Files",
-                                                                command=self.set_file_path)
-
-        tt = ToolTip(self)
-
-        tt.bind(self.config_label_path_button, f'{config["extracted_path"]}')
+        # tt = ToolTip(self)
+        # text = self.get_config('extracted_path')
+        # tt.bind(self.config_label_path_button, text)
         self.config_label_path_button.grid(row=4, column=0, padx=5, pady=(0, 10))
 
         # # # Create converter frame
@@ -212,16 +226,38 @@ class App(customtkinter.CTk):
 
     # # Logical Helper Functions
     def set_file_path(self):
-        dialog = customtkinter.CTkInputDialog(
-            text="What is the location to your extracted game files?",
-            title="Game File Location")
-        config.update({'extracted_path': dialog.get_input()})
-        # with open('config.py', 'w+') as f:
-        #     json.dump(config['extracted_path'], f
-        # self.extracted_path = str(dialog.get_input())
+        dialog_loop = True
+        try:
+            dialog = customtkinter.CTkInputDialog(
+                text=f"What is the location to your extracted game files?"
+                     f"\nCurrent: {config['extracted_path']}"
+                     f"\n\nFor this change to be permanent, please modify the config.py",
+                title="Game File Location")
+
+            # Set Binds -
+            # dialog.bind("<FocusOut>", self.on_focus_change)
+            # dialog.bind("<Destroy>", self.on_exit)
+            print(dialog.get_input()[-1:])
+            if not dialog.get_input()[-1:] == "/" or not dialog.get_input()[-1:] == "\\" or dialog_loop:
+                dialog = customtkinter.CTkInputDialog(
+                    text=f"ERROR: You did not enter a directory. Directories must end with '\\' or '/'"
+                         f"\nCurrent: {config['extracted_path']}"
+                         f"\n\nFor this change to be permanent, please modify the config.py"
+                         f"\n",
+                    title="Game File Location")
+            config.update({'extracted_path': dialog.get_input()})
+        except TypeError as err:
+            print(f"{err} - You most likely closed the menu with a blank entry.")
 
         print(config['extracted_path'])
         # print(f'Setting File Path: {dialog.get_input()}')
+
+    def get_config(self, option) -> str:
+        o = config[option]
+        return f'{o}'
+
+    def on_focus_change(self):
+        print("Input field focus changed")
 
     def example_text(self):
         with open("test.xml", "r+") as f:
@@ -229,14 +265,18 @@ class App(customtkinter.CTk):
             return contents
 
     def on_enter(self, event):
+        print(f"Running search from {event.keysym} key.")
         self.query_result()
+
+    def on_exit(self):
+        print("CTkInputDialog closed")
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
     def open_input_dialog_event(self):
-        dialog = customtkinter.CTkInputDialog(text="Type in a number:", title="Search Commands")
-        print("CTkInputDialog:", dialog.get_input())
+        dialog = customtkinter.CTkInputDialog(text="Type here:", title="Search Commands")
+        print("Test Dialog Box:", dialog.get_input())
 
     def sidebar_button_event(self, button):
 
@@ -255,7 +295,7 @@ class App(customtkinter.CTk):
 
     def insert_xml_file(self, xml_file, textbox):
         keywords = config["syntax_keywords"]
-        highlighter = SyntaxHighlighter(xml_file, textbox, keywords)
+        highlighter = SyntaxHighlighter(xml_file, textbox)
         highlighter.highlight()
 
     def change_scaling_event(self, new_scaling: str):
@@ -265,21 +305,21 @@ class App(customtkinter.CTk):
 
     def query_result(self):
         global mapped_list
-        self.entry.delete(0, customtkinter.END)
         self.textbox.delete("0.0", customtkinter.END)
-
         word = self.entry.get()
+        print(word)
         keyword = re.compile(rf'{word}')
         file_path = config['extracted_path']
         files = glob.glob(f'{file_path}**\\*.xml')
+        number_of_files = len(files)
         found_word = False
         number_found = 0
 
         if not config['exact_match']:
             keyword = re.compile(rf'{word}', re.IGNORECASE)
 
-        print('Running Search....')
-        for file in files:
+        print(f'File Path: {file_path}\nRunning Search....')
+        for i, file in enumerate(files):
             with open(file, encoding='utf-8') as f:
                 contents = f.read()
                 # TODO: Make it so that there is a slider in Options to allow for "Exact Match"
@@ -288,16 +328,20 @@ class App(customtkinter.CTk):
                     directory = file.split('\\')[-2]
                     path = '/'.join(file.split('\\')[-2:])
                     filename = '/'.join(file.split('\\')[-1:])
-                    self.textbox.insert("0.0", text=f'Found "{found_word.group()}" in {str(path)}\n')
+                    self.textbox.insert("0.0", text=f'Found "{found_word.group()}" in ./{str(path)}\n')
                     number_found += 1
+                    mapped_list["all"].append(path)
                     if directory in mapped_list.keys():
-                        mapped_list[directory].append(filename)
+                        mapped_list[directory].append(path)
+
         if not found_word:
             self.textbox.insert("0.0", text=f'\nNo Results Found!\n')
         self.textbox.insert(
             "0.0",
-            text=f'\nFound {number_found} files containing: "{keyword.pattern}"\n'
+            text=f'\nFound {number_found} files containing: "{keyword.pattern}" (Exact Match is{" Not" if not config["exact_match"] else ""} Enabled)\n'
                  f'Select a filter option on the right to refine your search.\n\n')
+        # Delete search bar contents
+        self.entry.delete(0, customtkinter.END)
 
     # # #
     def select_frame_by_name(self, name):

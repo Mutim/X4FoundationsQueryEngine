@@ -7,43 +7,87 @@ import xmltodict
 import re
 import os
 
+import config
 
 Widget = Union[tk.Widget, ttk.Widget]
 
 
-from lxml import etree
-import re
-import os
-
 class SyntaxHighlighter:
-    def __init__(self, xml_file, textbox, keywords):
+    def __init__(self, xml_file, textbox):
         self.xml_file = xml_file
         self.tree = etree.parse(self.xml_file)
         self.root = self.tree.getroot()
         self.textbox = textbox
-        self.keywords = keywords
 
     def highlight(self):
+        char_count = 0
+
         xml_string = etree.tostring(self.root, encoding='unicode', pretty_print=True)
         self.textbox.insert("end", xml_string, "utf-8")
-        comment_re = re.compile(r"(<!--.*?-->)")
+        tag_re = re.compile(r'(<[^\s<>]+>)')
+        close_tag_re = re.compile(r'(</[^\s<>]+>)')
+        param_re = re.compile(r'(<[^\s<>]+(?= ))')
+        strings_re = re.compile(r'"([^"]*)"')
+        comment_re = re.compile(r"(<!--.*?-->)", re.DOTALL)
+
+        for m in tag_re.finditer(xml_string):
+            keyword_str = m.group()
+            start_index = m.start()
+            end_index = m.end()
+            adjusted_start = "end-%dc" % (len(xml_string) - start_index + char_count + 1)
+            adjusted_end = "end-%dc" % (len(xml_string) - end_index + char_count + 1)
+            self.textbox.tag_config(keyword_str, foreground="#ffd700")
+            self.textbox.tag_add(keyword_str, adjusted_start, adjusted_end)
+
+        for m in close_tag_re.finditer(xml_string):
+            keyword_str = m.group()
+            start_index = m.start()
+            end_index = m.end()
+            adjusted_start = "end-%dc" % (len(xml_string) - start_index + char_count + 1)
+            adjusted_end = "end-%dc" % (len(xml_string) - end_index + char_count + 1)
+            self.textbox.tag_config(keyword_str, foreground="#ffd700")
+            self.textbox.tag_add(keyword_str, adjusted_start, adjusted_end)
+
+        for m in param_re.finditer(xml_string):
+            keyword_str = m.group()
+            start_index = m.start()
+            end_index = m.end()
+            adjusted_start = "end-%dc" % (len(xml_string) - start_index + char_count + 1)
+            adjusted_end = "end-%dc" % (len(xml_string) - end_index + char_count + 1)
+            self.textbox.tag_config(keyword_str, foreground="#5F9EA0")
+            self.textbox.tag_add(keyword_str, adjusted_start, adjusted_end)
+
+        for m in strings_re.finditer(xml_string):
+            keyword_str = m.group()
+            start_index = m.start()
+            end_index = m.end()
+            adjusted_start = "end-%dc" % (len(xml_string) - start_index + char_count + 1)
+            adjusted_end = "end-%dc" % (len(xml_string) - end_index + char_count + 1)
+            self.textbox.tag_config(keyword_str, foreground="#8fbc8f")
+            self.textbox.tag_add(keyword_str, adjusted_start, adjusted_end)
+
         for m in comment_re.finditer(xml_string):
-            self.textbox.insert("end", m.group(), "utf-8")
-            self.textbox.tag_config("comment", foreground="green")
-            self.textbox.tag_add("comment", "end-%dc" % len(m.group()), "end")
-        for keyword, color in self.keywords:
-            index = 0
-            while keyword in xml_string[index:]:
-                start_index = xml_string.index(keyword, index)
-                end_index = start_index + len(keyword)
-                self.textbox.tag_config(keyword, foreground=color)
-                self.textbox.tag_add(keyword, "end-%dc" % (len(xml_string) - start_index + 1),
-                                     "end-%dc" % (len(xml_string) - end_index + 1))
-                index = end_index
+            char_count = 0
+            comment_str = m.group()
+            print(comment_str)
+            start_index = xml_string.index(comment_str, char_count)
+            end_index = start_index + len(comment_str)
+            print(f"Start Index: {start_index}, End Index: {end_index}")
+            adjusted_start = "end-%dc" % (len(xml_string) - start_index + char_count + 1)
+            adjusted_end = "end-%dc" % (len(xml_string) - end_index + char_count + 1)
+            print(f"Adjusted Start: {adjusted_start}, Adjusted End: {adjusted_end}")
+            self.textbox.tag_config("comment", foreground="#329664")
+            self.textbox.tag_add("comment", adjusted_start, adjusted_end)
+            char_count += len(comment_str)
 
         self.textbox.insert("end", "\n", "utf-8")
 
 
+def hex_to_rgb(value):
+    """Return (red, green, blue) for the color given as #rrggbb."""
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
 
 def xml_to_json(xml_file):
